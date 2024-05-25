@@ -5,8 +5,8 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from os import path, remove
 
 from sweater import app, db
-from models import User, Building,Category
-from forms import AddUserForm, LoginForm, UserForm, AddBuildingForm, AddCategoryForm
+from models import User, Building, Category, Floor, Room
+from forms import AddUserForm, LoginForm, UserForm, AddBuildingForm, AddCategoryForm, AddRoomForm, ChoseFloor
 
 
 @app.route('/', methods=['POST', 'GET'])
@@ -27,7 +27,7 @@ def create_user():
             if is_user:
                 # Если email занят, сообщаем об этом пользователю
                 flash('Пользователь с таким email уже зарегистрирован!')
-                return redirect(url_for('add_user'))
+                return redirect(url_for('create_user'))
             user = User(
                 first_name=form.first_name.data,
                 last_name=form.last_name.data,
@@ -44,7 +44,7 @@ def create_user():
             user.photo = file_path
             db.session.add(user)
             db.session.commit()
-            return redirect(url_for('login_page'))
+            return redirect(url_for('users'))
         return render_template('create_user.html', form=form, notification=True)
     else:
         return redirect(url_for('index'))
@@ -142,7 +142,7 @@ def edit_user(user_id):
                 if is_user.email != user.email:
                     # Если email занят, сообщаем об этом пользователю
                     flash('Пользователь с таким email уже зарегистрирован!')
-                    return redirect(url_for('add_user'))
+                    return redirect(url_for('edit_user'))
             user.first_name = form.first_name.data
             user.last_name = form.last_name.data
             user.patronymic = form.patronymic.data
@@ -232,7 +232,8 @@ def edit_building(building_id):
             building.address = form.address.data
 
             if form.photo.data:
-                remove(path.join(app.root_path, building.photo))
+                if path.exists(f'{app.root_path}{building.photo}'):
+                    remove(path.join(app.root_path, building.photo))
                 filename = f'building/{building.id}.{secure_filename(form.photo.data.filename)}'
                 file_path = path.join(app.config['UPLOAD_FOLDER'], filename)
                 form.photo.data.save(file_path)
@@ -251,7 +252,8 @@ def edit_building(building_id):
 def delete_building(building_id):
     access = db.session.get(User, current_user.get_id())
     if access.role or access.id == access.id:
-        remove(path.join(app.root_path, db.session.get(Building, building_id).photo))
+        if db.session.get(Building, building_id).photo:
+            remove(path.join(app.root_path, db.session.get(Building, building_id).photo))
         delete = db.session.get(Building, building_id)
         db.session.delete(delete)
         db.session.commit()
@@ -325,6 +327,106 @@ def delete_category(category_id):
         return redirect(url_for('categorys'))
 
 
+@app.route('/choose_a_room/<int:building_id>', methods=['POST', 'GET'])
+@login_required
+def choose_a_room(building_id):
+    data=False
+    form = ChoseFloor()
+    floors = db.session.get(Building, building_id).floor
+    form.floor.choices = [(i.id, i.number) for i in floors]
+    if form.validate_on_submit():
+        data = db.session.get(Floor, form.floor.data)
+        data = [i for i in data.rooms]
+        render_template('floor.html',form=form, data=data)
+    return render_template('floor.html',form=form, data=data)
+
+
+@app.route('/create_room', methods=['POST', 'GET'])
+@login_required
+def create_room():
+    access = db.session.get(User, current_user.get_id())
+    if access.role:
+        form = AddRoomForm()
+        building = Building.query.order_by(Building.id).all()
+        form.building.choices = [(i.id, i.address) for i in building]
+        if form.validate_on_submit():
+            building = db.session.get(Building, form.building.data)
+            floor = Floor.query.filter_by(number=form.floor.data, building=building.id).first()
+            if not floor:
+                floor = Floor(
+                        number=form.floor.data,
+                        building=building.id
+                              )
+                db.session.add(floor)
+                db.session.commit()
+            room = Room(
+                floor=floor.id,
+                number=form.number.data
+            )
+            db.session.add(room)
+            db.session.commit()
+            filename = f'room/{room.id}.{secure_filename(form.photo.data.filename)}'
+            file_path = path.join(app.config['UPLOAD_FOLDER'], filename)
+            form.photo.data.save(file_path)
+            room.photo = file_path
+            db.session.add(room)
+            db.session.commit()
+            return redirect(url_for('buildings'))
+        return render_template('create_building.html', form=form, notification=True)
+    else:
+        return redirect(url_for('index'))
+
+@app.route('/edit_room/<int:room_id>', methods=['POST', 'GET'])
+@login_required
+def edit_room(room_id):
+    access = db.session.get(User, current_user.get_id())
+    if access.role:
+        room = db.session.get(Room, room_id)
+        form = AddRoomForm(floor=room.floor, number=room.number)
+        building = Building.query.order_by(Building.id).all()
+        form.building.choices = [(i.id, i.address) for i in building]
+        if form.validate_on_submit():
+            building = db.session.get(Building, form.building.data)
+            floor = Floor.query.filter_by(number=form.floor.data, building=building.id).first()
+            if not floor:
+                floor = Floor(
+                        number=form.floor.data,
+                        building=building.id
+                              )
+                db.session.add(floor)
+                db.session.commit()
+            room = Room(
+                floor=floor.id,
+                number=form.number.data
+            )
+            db.session.add(room)
+            db.session.commit()
+            if form.photo.data:
+                if path.exists(f'{app.root_path}/{room.photo}'):
+                    remove(path.join(app.root_path, room.photo))
+                filename = f'room/{room.id}.{secure_filename(form.photo.data.filename)}'
+                file_path = path.join(app.config['UPLOAD_FOLDER'], filename)
+                form.photo.data.save(file_path)
+                room.photo = file_path
+            db.session.add(room)
+            db.session.commit()
+            return redirect(url_for('buildings'))
+        return render_template('create_building.html', form=form, notification=True)
+    else:
+        return redirect(url_for('index'))
+
+
+@app.route('/delete_room/<int:room_id>', methods=['GET', 'POST'])
+@login_required
+def delete_room(room_id):
+    access = db.session.get(User, current_user.get_id())
+    if access.role or access.id == access.id:
+        if db.session.get(Room, room_id).photo and path.exists(path.join(app.root_path, db.session.get(Room, room_id).photo)):
+            remove(path.join(app.root_path, db.session.get(Room, room_id).photo))
+        delete = db.session.get(Room, room_id)
+        db.session.delete(delete)
+        db.session.commit()
+        return redirect(url_for('buildings'))
 
 @app.before_request
 def create_bases():

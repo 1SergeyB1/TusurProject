@@ -34,7 +34,7 @@ class Building(db.Model):
     # Адресс
     address = db.Column(db.String())
     # помещения
-    rooms = db.relationship("Floor")
+    floor = db.relationship("Floor")
 
 
 class Floor(db.Model):
@@ -53,6 +53,9 @@ class Room(db.Model):
     __tablename__ = 'rooms'
     id = db.Column(db.Integer, primary_key=True)
     floor = db.Column(db.Integer(), db.ForeignKey(Floor.id))
+    number = db.Column(db.Integer())
+    photo = db.Column(db.String())
+    property = db.relationship("Property")
 
 
 class Category(db.Model):
@@ -73,8 +76,6 @@ class Property(db.Model):
     responsible_person = db.Column(db.Integer, db.ForeignKey(User.id))
     date_of_commissioning = db.Column(db.DateTime(timezone=True), server_default=func.now())
     qr_code = db.Column(db.String())
-
-
 
 
 @manager.user_loader

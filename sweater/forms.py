@@ -1,5 +1,5 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, EmailField, SubmitField, BooleanField, SelectField, FileField
+from wtforms import StringField, PasswordField, SubmitField, BooleanField, SelectField, FileField, IntegerField
 from wtforms.validators import DataRequired, InputRequired, Email, EqualTo, regexp
 
 
@@ -25,9 +25,12 @@ class LoginForm(FlaskForm):
 
 
 class UserForm(FlaskForm):
-    first_name = StringField('Имя пользователя', [DataRequired(message='Форма не может быть пустой')], render_kw={'readonly': True})
-    last_name = StringField('Фамилия пользователя', [DataRequired(message='Форма не может быть пустой')], render_kw={'readonly': True})
-    patronymic = StringField('Отчество пользователя', [DataRequired(message='Форма не может быть пустой')], render_kw={'readonly': True})
+    first_name = StringField('Имя пользователя', [DataRequired(message='Форма не может быть пустой')],
+                             render_kw={'readonly': True})
+    last_name = StringField('Фамилия пользователя', [DataRequired(message='Форма не может быть пустой')],
+                            render_kw={'readonly': True})
+    patronymic = StringField('Отчество пользователя', [DataRequired(message='Форма не может быть пустой')],
+                             render_kw={'readonly': True})
     email = StringField('Почта пользователя',
                         [DataRequired(message='Форма не может быть пустой'), Email(message="некорректный email")])
     password = PasswordField('Пароль ', [DataRequired(message='Форма не может быть пустой'),
@@ -40,10 +43,22 @@ class UserForm(FlaskForm):
 
 class AddBuildingForm(FlaskForm):
     address = StringField('Адрес', [DataRequired(message='Форма не может быть пустой')])
-    photo = FileField('Фотография')
+    photo = FileField('Фотография', [DataRequired(message='Форма не может быть пустой')])
     submit = SubmitField('Добавить корпус')
+
+
+class AddRoomForm(FlaskForm):
+    building = SelectField('Корпус', [DataRequired(message='Форма не может быть пустой')], choices=[])
+    floor = IntegerField('Этаж', [DataRequired(message='Форма не может быть пустой')])
+    number = IntegerField('Номер помещения', [DataRequired(message='Форма не может быть пустой')])
+    photo = FileField('Фотография', [DataRequired(message='Форма не может быть пустой')])
+    submit = SubmitField('Добавить помещение')
 
 
 class AddCategoryForm(FlaskForm):
     name = StringField('Название категории', [DataRequired(message='Форма не может быть пустой')])
     submit = SubmitField('Добавить корпус')
+
+
+class ChoseFloor(FlaskForm):
+    floor = SelectField('Этаж', [DataRequired(message='Форма не может быть пустой')], choices=[], render_kw={'onchange':'this.form.submit()'})
