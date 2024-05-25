@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% import 'bootstrap/wtf.html' as wtf %}
+{% block title %}Список категорий{% endblock %}
+{% block content %}
+<table border="1">
+    <tr><th class="bg-body-tertiary border rounded-3">id</th><th class="bg-body-tertiary border rounded-3">Имя</th><th class="bg-body-tertiary border rounded-3">Редактировать категорию</th><th class="bg-body-tertiary border rounded-3">Удалить категорию</th></tr>
+    {% for i in data %}
+        <tr><th class="bg-body-tertiary border rounded-3">{{i.id}}</th>
+            <th class="bg-body-tertiary border rounded-3">{{i.name}}</th>
+            <th class="bg-body-tertiary border rounded-3"><a href = "{{url_for('edit_category',  category_id = i.id) }}"><button class="btn btn-outline-secondary">Редактировать</button></a></th>
+            <th class="bg-body-tertiary border rounded-3"> <a href = "{{url_for('delete_category',  category_id = i.id) }}"><button class="btn btn-outline-secondary">Удалить</button> </a></th>
+        </tr>
+    {%endfor%}
+</table>
+<br>
+<a href="{{url_for('create_category')}}"><button class="btn btn-primary">+</button></a>
+{% endblock %}
