@@ -2,7 +2,6 @@
 {% import 'bootstrap/wtf.html' as wtf %}
 {% block title %}Добавить пользователя{% endblock %}
 {% block content %}
-
 {% with messages = get_flashed_messages() %}
   {% if messages %}
     <ul class=flashes>
@@ -13,8 +12,8 @@
   {% endif %}
 {% endwith %}
 
-{% if photo %}
-<img src="{{url_for('upload', file = photo)}}" alt="Aleq" width="100" height="100"/>
+{% if user.photo %}
+<img src="{{url_for('upload', file = user.photo)}}" alt="Aleq" width="100" height="100"/>
 {% endif %}
 
 {{ wtf.quick_form(form)}}

@@ -2,25 +2,49 @@
 
 {% block navbar %}
     <!-- Классы navbar и navbar-default -->
-    <nav class="navbar navbar-default">
-      <!-- Контейнер -->
-      <div class="container-fluid">
-        <!-- Заголовок -->
-          <!-- Бренд или название сайта -->
-          <a class="navbar-brand" href="{{url_for('index')}}">Абоба</a>
-        <!-- Основная часть меню -->
-        <div class="collapse navbar-collapse" id="navbar-main">
+    {% if user.role %}
+      <nav class="navbar navbar-default">
+          <!-- Контейнер -->
+          <div class="container-fluid">
+            <!-- Заголовок -->
+              <!-- Бренд или название сайта -->
+              <a class="navbar-brand" href="{{url_for('index')}}">Администратор</a>
+            <!-- Основная часть меню -->
+            <div class="collapse navbar-collapse" id="navbar-main">
 
-          <!-- Содержимое основной части -->
-          <ul class="nav navbar-nav">
-            <li><a href="">Главная страница </a></li>
-            <li><a href="">Добавить пользователя</a></li>
-            <li><a href="">Добавить роль</a></li>
-            <li><a href="#">Ссылка 4</a></li>
-            <li><a href="#">Ссылка 5</a></li>
-          </ul>
+              <!-- Содержимое основной части -->
+              <ul class="nav navbar-nav">
+                <li><a href="{{url_for('users')}}">Пользователи </a></li>
+                <li><a href="">Добавить пользователя</a></li>
+                <li><a href="">Добавить роль</a></li>
+                <li><a href="#">Ссылка 4</a></li>
+                <li><a href="#">Ссылка 5</a></li>
+              </ul>
 
-        </div>
-      </div>
-    </nav>
-{% endblock %}
+            </div>
+          </div>
+        </nav>
+    {%else%}
+      <nav class="navbar navbar-default">
+          <!-- Контейнер -->
+          <div class="container-fluid">
+            <!-- Заголовок -->
+              <!-- Бренд или название сайта -->
+              <a class="navbar-brand" href="{{url_for('index')}}">{{user.first_name}} {{user.last_name}}</a>
+            <!-- Основная часть меню -->
+            <div class="collapse navbar-collapse" id="navbar-main">
+
+              <!-- Содержимое основной части -->
+              <ul class="nav navbar-nav">
+                <li><a href="{{url_for('users')}}">Пользователи </a></li>
+                <li><a href="">Добавить пользователя</a></li>
+                <li><a href="">Добавить роль</a></li>
+                <li><a href="#">Ссылка 4</a></li>
+                <li><a href="#">Ссылка 5</a></li>
+              </ul>
+
+            </div>
+          </div>
+        </nav>
+    {%endif%}
+{%endblock%}

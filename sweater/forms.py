@@ -61,4 +61,4 @@ class AddCategoryForm(FlaskForm):
 
 
 class ChoseFloor(FlaskForm):
-    floor = SelectField('Этаж', [DataRequired(message='Форма не может быть пустой')], choices=[], render_kw={'onchange':'this.form.submit()'})
+    floor = SelectField('Этаж', choices=[], render_kw={'onchange':'this.form.submit()'})

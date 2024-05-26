@@ -12,7 +12,8 @@ from forms import AddUserForm, LoginForm, UserForm, AddBuildingForm, AddCategory
 @app.route('/', methods=['POST', 'GET'])
 @login_required
 def index():
-    return render_template('index.html')
+    user = db.session.get(User, current_user.get_id())
+    return render_template('index.html', user=user)
 
 
 @app.route('/create_user', methods=['POST', 'GET'])
@@ -66,7 +67,7 @@ def login_page():
             flash('Логин или пароль не корректны!')
     else:
         flash('Пожалуйста, заполните пропущенные ячейки!')
-    return render_template('login.html', form=form)
+    return render_template('login.html', form=form, user=User())
 
 
 @app.route('/users', methods=['POST', 'GET'])
@@ -80,41 +81,37 @@ def users():
         return redirect(url_for('index'))
 
 
-@app.route('/profile/<int:user_id>', methods=['POST', 'GET'])
+@app.route('/profile', methods=['POST', 'GET'])
 @login_required
-def profile(user_id):
-    access = db.session.get(User, current_user.get_id())
-    if access.role:
-        user = db.session.get(User, user_id)
-        form = UserForm(first_name=user.first_name,
-                        last_name=user.last_name,
-                        patronymic=user.patronymic,
-                        email=user.email,
-                        role=user.role)
-        if form.validate_on_submit():
-            # Запрашиваем в база пользователя по email
-            is_user = User.query.filter_by(email=form.email.data).first()
-            if is_user:
-                if is_user.email != user.email:
-                    # Если email занят, сообщаем об этом пользователю
-                    flash('Пользователь с таким email уже зарегистрирован!')
-                    return redirect(url_for('add_user'))
-            user.email = form.email.data
-            user.password = generate_password_hash(form.password.data)
+def profile():
+    user = db.session.get(User, current_user.get_id())
+    form = UserForm(first_name=user.first_name,
+                    last_name=user.last_name,
+                    patronymic=user.patronymic,
+                    email=user.email,
+                    role=user.role)
+    if form.validate_on_submit():
+        # Запрашиваем в база пользователя по email
+        is_user = User.query.filter_by(email=form.email.data).first()
+        if is_user:
+            if is_user.email != user.email:
+                # Если email занят, сообщаем об этом пользователю
+                flash('Пользователь с таким email уже зарегистрирован!')
+                return redirect(url_for('add_user'))
+        user.email = form.email.data
+        user.password = generate_password_hash(form.password.data)
 
-            if form.photo.data:
-                remove(path.join(app.root_path, user.photo))
-                filename = f'avatars/{user.id}.{secure_filename(form.photo.data.filename)}'
-                file_path = path.join(app.config['UPLOAD_FOLDER'], filename)
-                form.photo.data.save(file_path)
-                user.photo = file_path
-            db.session.add(user)
-            db.session.commit()
-            return redirect(url_for('profile', user_id=user_id))
+        if form.photo.data:
+            remove(path.join(app.root_path, user.photo))
+            filename = f'avatars/{user.id}.{secure_filename(form.photo.data.filename)}'
+            file_path = path.join(app.config['UPLOAD_FOLDER'], filename)
+            form.photo.data.save(file_path)
+            user.photo = file_path
+        db.session.add(user)
+        db.session.commit()
+        return redirect(url_for('profile', user_id=user.id))
 
-        return render_template('create_user.html', form=form, notification=True, photo=access.photo)
-    else:
-        return redirect(url_for('index'))
+    return render_template('create_user.html', form=form, notification=True, user=user)
 
 
 @app.route('/upload/<path:file>', methods=['GET', 'POST'])
@@ -160,16 +157,16 @@ def edit_user(user_id):
             db.session.commit()
             return redirect(url_for('users'))
 
-        return render_template('create_user.html', form=form, notification=True)
+        return render_template('create_user.html', form=form, notification=True, user=access)
     else:
         return redirect(url_for('index'))
 
-
+#url_for('delete_user',user_id=user.id)
 @app.route('/delete_user/<int:user_id>', methods=['GET', 'POST'])
 @login_required
 def delete_user(user_id):
     access = db.session.get(User, current_user.get_id())
-    if access.role or access.id == access.id:
+    if access.role:
         remove(path.join(app.root_path, db.session.get(User, user_id).photo))
         delete = db.session.get(User, user_id)
         db.session.delete(delete)
@@ -180,8 +177,9 @@ def delete_user(user_id):
 @app.route('/buildings', methods=['POST', 'GET'])
 @login_required
 def buildings():
+    user = db.session.get(User, current_user.get_id())
     data = Building.query.order_by(Building.id).all()
-    return render_template('buildings.html', data=data)
+    return render_template('buildings.html', data=data, user=user)
 
 
 @app.route('/create_building', methods=['POST', 'GET'])
@@ -209,7 +207,7 @@ def create_building():
             db.session.add(building)
             db.session.commit()
             return redirect(url_for('buildings'))
-        return render_template('create_building.html', form=form, notification=True)
+        return render_template('create_building.html', form=form, notification=True, user=access)
     else:
         return redirect(url_for('index'))
 
@@ -242,7 +240,7 @@ def edit_building(building_id):
             db.session.commit()
             return redirect(url_for('buildings'))
 
-        return render_template('create_building.html', form=form, notification=True)
+        return render_template('create_building.html', form=form, notification=True, user=access)
     else:
         return redirect(url_for('index'))
 
@@ -330,15 +328,16 @@ def delete_category(category_id):
 @app.route('/choose_a_room/<int:building_id>', methods=['POST', 'GET'])
 @login_required
 def choose_a_room(building_id):
-    data=False
+    user = db.session.get(User, current_user.get_id())
+    data = False
     form = ChoseFloor()
     floors = db.session.get(Building, building_id).floor
-    form.floor.choices = [(i.id, i.number) for i in floors]
-    if form.validate_on_submit():
+    form.floor.choices = [('', '')]+[(i.id, i.number) for i in floors if i.rooms]
+    if form.validate_on_submit() and form.floor.data:
         data = db.session.get(Floor, form.floor.data)
         data = [i for i in data.rooms]
-        render_template('floor.html',form=form, data=data)
-    return render_template('floor.html',form=form, data=data)
+        render_template('floor.html', form=form, data=data, user=user)
+    return render_template('floor.html', form=form, data=data, user=user)
 
 
 @app.route('/create_room', methods=['POST', 'GET'])
@@ -354,9 +353,9 @@ def create_room():
             floor = Floor.query.filter_by(number=form.floor.data, building=building.id).first()
             if not floor:
                 floor = Floor(
-                        number=form.floor.data,
-                        building=building.id
-                              )
+                    number=form.floor.data,
+                    building=building.id
+                )
                 db.session.add(floor)
                 db.session.commit()
             room = Room(
@@ -372,9 +371,10 @@ def create_room():
             db.session.add(room)
             db.session.commit()
             return redirect(url_for('buildings'))
-        return render_template('create_building.html', form=form, notification=True)
+        return render_template('create_building.html', form=form, notification=True, user=access)
     else:
         return redirect(url_for('index'))
+
 
 @app.route('/edit_room/<int:room_id>', methods=['POST', 'GET'])
 @login_required
@@ -390,9 +390,9 @@ def edit_room(room_id):
             floor = Floor.query.filter_by(number=form.floor.data, building=building.id).first()
             if not floor:
                 floor = Floor(
-                        number=form.floor.data,
-                        building=building.id
-                              )
+                    number=form.floor.data,
+                    building=building.id
+                )
                 db.session.add(floor)
                 db.session.commit()
             room = Room(
@@ -411,7 +411,7 @@ def edit_room(room_id):
             db.session.add(room)
             db.session.commit()
             return redirect(url_for('buildings'))
-        return render_template('create_building.html', form=form, notification=True)
+        return render_template('create_building.html', form=form, notification=True, user=access)
     else:
         return redirect(url_for('index'))
 
@@ -421,12 +421,14 @@ def edit_room(room_id):
 def delete_room(room_id):
     access = db.session.get(User, current_user.get_id())
     if access.role or access.id == access.id:
-        if db.session.get(Room, room_id).photo and path.exists(path.join(app.root_path, db.session.get(Room, room_id).photo)):
+        if db.session.get(Room, room_id).photo and path.exists(
+                path.join(app.root_path, db.session.get(Room, room_id).photo)):
             remove(path.join(app.root_path, db.session.get(Room, room_id).photo))
         delete = db.session.get(Room, room_id)
         db.session.delete(delete)
         db.session.commit()
         return redirect(url_for('buildings'))
+
 
 @app.before_request
 def create_bases():
